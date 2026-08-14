@@ -103,7 +103,7 @@ SVCB RRs (RR type 64):
 
 HTTPS RRs (RR type 65):
 : For WebTransport MOQT endpoints.  MAY carry both `moqt` and HTTP ALPN
-  (`h3`).  `moqt` URIs using WebTransport map to `https` 
+  (`h3`).  `moqt` URIs using WebTransport map to `https`
   URIs ({{moq-transport, Section 3}}); both schemes default to port 443.
 
 ## Record Names {#svcb-name}
