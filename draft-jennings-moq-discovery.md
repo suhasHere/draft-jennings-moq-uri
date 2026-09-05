@@ -50,11 +50,17 @@ normative:
   RFC2782:
   RFC6762:
   RFC6763:
+  RFC5890:
+  RFC5280:
+  RFC9525:
+  RFC4985:
   moq-transport: I-D.ietf-moq-transport
 
 informative:
   RFC7838:
   RFC8499:
+  RFC6943:
+  RFC9110:
 
 --- abstract
 
@@ -88,6 +94,9 @@ mDNS and DNS-SD ({{mdns}}):
   network discovery without a central DNS server.
 
 # Conventions and Definitions
+
+This specification uses the terminology from {{RFC3986}}, {{RFC5280}},
+and {{RFC9525}}.
 
 {::boilerplate bcp14-tagged}
 
@@ -252,6 +261,67 @@ key-value pair:
 
 A client MUST treat an instance whose TXT record does not contain a
 recognized `alpn` value as unusable.
+
+# URI Normalization
+
+For comparison purposes, the URI, or part of the URI, is put in a
+canonical form and then bitwise compared to the data from the X.509
+certificate after putting it into canonical form. This section defines
+how to create the canonical form.
+
+The URI MUST be normalized using Case Normalization and Percent-Encoding
+Normalization as specified in Sections 6.2.2.1 and 6.2.2.2 of
+{{RFC3986}}.
+
+The "." and ".." sequences have no special meaning in MOQT URIs and are
+not changed during normalization.
+
+If the port is missing, it MUST be replaced with the default port (443).
+
+If the URI reg-name ends in a ".", that MUST be removed.
+
+Internationalized Domain Names in the reg-name MUST be converted to IDNA
+format as defined in {{RFC5890}}.
+
+When comparing hostnames, wildcard matching MUST NOT be supported and
+the "*" character has no special meaning.
+
+
+# X.509 Certificate Matching
+
+The fields referenced in this section are defined in {{RFC5280}} and
+{{RFC4985}}.
+
+The CN-ID field as defined in {{RFC9525}} MUST NOT be used.
+
+If any one of the following identifiers in the subjectAltName of the
+certificate matches the URI, then the certificate is valid for that URI.
+
+* dNSName: The canonicalized dNSName from the certificate matches the
+  host part of the authority from the canonicalized URI.
+
+* iPAddress: The host part of the authority from the canonicalized URI,
+  parsed as an IP address, matches the iPAddress value from the
+  certificate.
+
+* uniformResourceIdentifier: The canonicalized uniformResourceIdentifier
+  MUST match the canonicalized URI with the query and fragment removed.
+
+* SRVName: Matched as described in Section 4 of {{RFC4985}} using the
+  host part of the authority from the canonicalized URI as the name
+  restriction and a SRVName restrictions of "_moqt".
+
+## SVCB and SRV Indirection
+
+When a client is redirected to a different target host, certificate
+matching MUST be performed against the authority from the original
+`moqt` URI, not the resolved target name.  This is consistent with the requirements in
+{{RFC9460, Section 2.3}} and with the SRV rules in {{srv}} of this
+document.
+
+SRVName matching ({{RFC4985}}) applies regardless of whether the client
+discovered the endpoint via SRV records or SVCB records, because the
+`_moqt` service type is the same in both cases.
 
 # Security Considerations {#security-considerations}
 
