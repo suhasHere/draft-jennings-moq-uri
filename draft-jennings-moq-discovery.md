@@ -55,6 +55,7 @@ normative:
 informative:
   RFC7838:
   RFC8499:
+  RFC6943:
 
 --- abstract
 
