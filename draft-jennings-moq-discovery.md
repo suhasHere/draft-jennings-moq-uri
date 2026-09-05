@@ -52,7 +52,7 @@ normative:
   RFC6763:
   RFC5890:
   RFC5280:
-  RFC6125:
+  RFC9525:
   RFC4985:
   moq-transport: I-D.ietf-moq-transport
 
@@ -95,7 +95,8 @@ mDNS and DNS-SD ({{mdns}}):
 
 # Conventions and Definitions
 
-This specification uses the terminology from {{RFC3986}} and {{RFC5280}}.
+This specification uses the terminology from {{RFC3986}}, {{RFC5280}},
+and {{RFC9525}}.
 
 {::boilerplate bcp14-tagged}
 
@@ -265,17 +266,17 @@ recognized `alpn` value as unusable.
 
 For comparison purposes, the URI, or part of the URI, is put in a
 canonical form and then bitwise compared to the data from the X.509
-certificate after putting it into canonical. This section defined how to
-create the canonical form.
+certificate after putting it into canonical form. This section defines
+how to create the canonical form.
 
-All of the URI MUST be Case Normalization and Percent-Encoding
-Normalization as specified in Section 6.2.2.1 and 6.2.2.2 of
+The URI MUST be normalized using Case Normalization and Percent-Encoding
+Normalization as specified in Sections 6.2.2.1 and 6.2.2.2 of
 {{RFC3986}}.
 
-The . and .. sequence have no special meaning in MOQ URI and not changed
-in the normalization.
+The "." and ".." sequences have no special meaning in MOQT URIs and are
+not changed during normalization.
 
-If the port is missing, it MUST be replaced with the default port.
+If the port is missing, it MUST be replaced with the default port (443).
 
 If the URI reg-name ends in a ".", that MUST be removed.
 
@@ -291,16 +292,16 @@ the "*" character has no special meaning.
 The fields referenced in this section are defined in {{RFC5280}} and
 {{RFC4985}}.
 
-The CN-ID field as defined in {{RFC6125}} MUST NOT be used.
+The CN-ID field as defined in {{RFC9525}} MUST NOT be used.
 
-If any of one of the following identifiers in the subjectAltName of the
-certificate match the URI, then certificate is valid for that URI.
+If any one of the following identifiers in the subjectAltName of the
+certificate matches the URI, then the certificate is valid for that URI.
 
 * dNSName: The canonicalized dNSName from the certificate matches the
   host part of the authority from the canonicalized URI.
 
-* iPAddress: The host part of the authority from the canonicalized URI
-  matches the canonicalized form of the iPAddress string from the
+* iPAddress: The host part of the authority from the canonicalized URI,
+  parsed as an IP address, matches the iPAddress value from the
   certificate.
 
 * uniformResourceIdentifier: The canonicalized uniformResourceIdentifier
@@ -310,7 +311,7 @@ certificate match the URI, then certificate is valid for that URI.
   host part of the authority from the canonicalized URI as the name
   restriction and a SRVName restrictions of "_moqt".
 
-TODO - consider any issues when using SRVB.
+TODO - consider any issues when using SVCB.
 
 # Security Considerations {#security-considerations}
 
