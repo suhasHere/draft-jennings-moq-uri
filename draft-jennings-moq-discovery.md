@@ -22,7 +22,7 @@ venue:
   type: "Working Group"
   mail: "moq@ietf.org"
   arch: "https://mailarchive.ietf.org/arch/browse/moq/"
-  github: "moq-wg/moq-transport"
+  github: "suhasHere/draft-jennings-moq-discovery"
 
 stand_alone: yes
 smart_quotes: no
