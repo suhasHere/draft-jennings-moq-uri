@@ -311,7 +311,17 @@ certificate matches the URI, then the certificate is valid for that URI.
   host part of the authority from the canonicalized URI as the name
   restriction and a SRVName restrictions of "_moqt".
 
-TODO - consider any issues when using SVCB.
+## SVCB and SRV Indirection
+
+When a client is redirected to a different target host, certificate
+matching MUST be performed against the authority from the original
+`moqt` URI, not the resolved target name.  This is consistent with the requirements in
+{{RFC9460, Section 2.3}} and with the SRV rules in {{srv}} of this
+document.
+
+SRVName matching ({{RFC4985}}) applies regardless of whether the client
+discovered the endpoint via SRV records or SVCB records, because the
+`_moqt` service type is the same in both cases.
 
 # Security Considerations {#security-considerations}
 
