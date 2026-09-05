@@ -310,6 +310,7 @@ certificate match the URI, then certificate is valid for that URI.
   host part of the authority from the canonicalized URI as the name
   restriction and a SRVName restrictions of "_moqt".
 
+TODO - consider any issues when using SRVB.
 
 # Security Considerations {#security-considerations}
 
