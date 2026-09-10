@@ -280,9 +280,11 @@ SVCB RRs (RR type 64):
   name ({{svcb-name}}); carries `moqt`/`moqt-N` ALPNs only.
 
 HTTPS RRs (RR type 65):
-: For WebTransport MOQT endpoints.  MAY carry both `moqt` and HTTP ALPN
-  (`h3`).  `moqt` URIs using WebTransport map to `https`
-  URIs ({{moq-transport, Section 6.2.1}}); both schemes default to port 443.
+: For WebTransport MOQT endpoints.  A `moqt` URI using WebTransport maps
+  to an `https` URI ({{moq-transport, Section 6.2.1}}); the client resolves
+  that `https` URI using HTTPS resource records following standard `https`
+  processing rules ({{RFC9460, Section 9.1}}).  No MOQT-specific ALPN
+  values appear in HTTPS records.
 
 ## Record Names {#svcb-name}
 
@@ -312,16 +314,16 @@ implicit default ALPN.  Every ServiceMode record MUST include an explicit
 The following ALPN identifiers are defined for MOQT:
 
 `moqt`:
-: Native QUIC, published MOQT specification ({{RFC7301}}).  MUST appear
-  in SVCB records; MAY appear in HTTPS records when the server supports
-  both native QUIC and WebTransport.
+: Native QUIC, published MOQT specification ({{RFC7301}}).  SVCB records
+  only.
 
 `moqt-N` (where N is a non-negative integer):
 : Native QUIC, draft version N (e.g., `moqt-15`).  Ephemeral; MUST NOT
-  be used in production.  Same record-placement rules as `moqt`.
+  be used in production.  SVCB records only.
 
 `h3`:
 : WebTransport over HTTP/3 ({{moq-transport}}).  HTTPS records only.
+  Standard `https`-origin ALPN; see {{RFC9460, Section 9.1}}.
 
 A client MUST treat a record whose `alpn` contains none of its supported
 identifiers as unusable and proceed as if no record were present.
