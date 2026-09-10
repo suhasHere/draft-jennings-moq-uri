@@ -240,6 +240,9 @@ The fields referenced in this section are defined in {{RFC5280}} and
 
 The CN-ID field as defined in {{RFC9525}} MUST NOT be used.
 
+Clients MUST implement dNSName and iPAddress matching.  Support for
+uniformResourceIdentifier and SRVName matching is OPTIONAL.
+
 If any one of the following identifiers in the subjectAltName of the
 certificate matches the URI, then the certificate is valid for that URI.
 
@@ -257,13 +260,28 @@ certificate matches the URI, then the certificate is valid for that URI.
   host part of the authority from the canonicalized URI as the name
   restriction and a SRVName restrictions of "_moqt".
 
+## WebTransport Certificate Validation
+
+When connecting via WebTransport, the TLS handshake terminates at an
+`https` origin derived from the `moqt` URI ({{moq-transport,
+Section 6.2.1}}).  In this case, the client validates the server
+certificate against that `https` URI using standard Web PKI procedures;
+the `moqt`-specific matching rules above do not apply.  The TLS SNI
+extension MUST contain the host from the derived `https` URI.
+
+The `moqt`-specific certificate matching defined in this section applies
+only to native QUIC connections where the client connects directly using
+an MOQT ALPN.  On such connections the TLS SNI extension MUST contain
+the host from the original `moqt` URI.
+
 ## SVCB and SRV Indirection
 
-When a client is redirected to a different target host, certificate
-matching MUST be performed against the authority from the original
-`moqt` URI, not the resolved target name.  This is consistent with the
-requirements in {{RFC9460, Section 2.3}} and with the SRV rules in
-{{srv}} of this document.
+When a client is redirected to a different target host via SVCB or SRV,
+certificate matching MUST be performed against the authority from the
+original `moqt` URI, not the resolved target name.  The TLS SNI
+extension likewise MUST contain the original authority's host.  This is
+consistent with the requirements in {{RFC9460, Section 2.3}} and with
+the SRV rules in {{srv}} of this document.
 
 SRVName matching ({{RFC4985}}) applies regardless of whether the client
 discovered the endpoint via SRV records or SVCB records, because the
