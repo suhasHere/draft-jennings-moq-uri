@@ -24,7 +24,7 @@ venue:
   type: "Working Group"
   mail: "moq@ietf.org"
   arch: "https://mailarchive.ietf.org/arch/browse/moq/"
-  github: "suhasHere/draft-jennings-moq-discovery"
+  github: "suhasHere/draft-jennings-moq-uri"
 
 stand_alone: yes
 smart_quotes: no
