@@ -180,11 +180,21 @@ The client resolves the `host` subcomponent of the `authority` to one or
 more network addresses, most commonly using DNS A {{RFC1035}} and AAAA
 {{RFC3596}} records.
 
-When SVCB-compatible records {{RFC9460}} are published for the `authority`,
+When SVCB or HTTPS records are published for the `authority`,
 a client MAY use them to learn the server's endpoints and supported ALPN
-protocols before connecting ({{svcb}}).  A client using WebTransport
-resolves the `https` URI derived in {{moq-transport, Section 6.2.1}} using
-HTTPS resource records as for any `https` origin.
+protocols before connecting; see {{svcb}} for the `moqt`-specific SVCB
+mapping.  A client using WebTransport resolves the `https` URI derived in
+{{moq-transport, Section 6.2.1}} using HTTPS resource records as for any
+`https` origin.
+
+When SVCB and HTTPS records are not available, a client MAY fall back to
+SRV records ({{srv}}) or, on a local link, use mDNS and DNS-SD
+({{mdns}}).
+
+The URI MUST be normalized as specified in {{uri-normalization}} before
+certificate comparison.  The server's X.509 certificate MUST be validated
+against the original `moqt` URI authority as described in
+{{cert-matching}}.
 
 If the port is omitted in the URI, a default port of 443 is used.
 
