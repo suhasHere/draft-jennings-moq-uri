@@ -374,7 +374,10 @@ local client policy and is out of scope for this document.
 # SRV Records for MOQT {#srv}
 
 SRV records {{RFC2782}} provide port and target for load balancing and
-failover but carry no ALPN or connection parameters.
+failover but carry no ALPN or connection parameters.  SRV support is
+retained because it is required by DNS-SD ({{mdns}}) and provides a
+transitional fallback for deployments where SVCB infrastructure is not
+yet available.
 
 ## SRV Record Names
 
