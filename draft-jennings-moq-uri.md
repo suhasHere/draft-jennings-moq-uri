@@ -1,7 +1,7 @@
 ---
-title: "DNS and mDNS Discovery for MOQT"
-abbrev: "moq-discovery"
-docname: draft-jennings-moq-discovery-latest
+title: "MOQT URI and Discovery"
+abbrev: "moq-uri"
+docname: draft-jennings-moq-uri-latest
 date: {DATE}
 category: std
 
@@ -11,6 +11,8 @@ submissionType: IETF
 workgroup: "Media Over QUIC"
 keyword:
  - media over quic
+ - moqt uri
+ - uri resolution
  - svcb
  - https records
  - service discovery
@@ -22,7 +24,7 @@ venue:
   type: "Working Group"
   mail: "moq@ietf.org"
   arch: "https://mailarchive.ietf.org/arch/browse/moq/"
-  github: "suhasHere/draft-jennings-moq-discovery"
+  github: "suhasHere/draft-jennings-moq-uri"
 
 stand_alone: yes
 smart_quotes: no
@@ -42,32 +44,39 @@ author:
     email: snandaku@cisco.com
 
 normative:
+  RFC1035:
   RFC2119:
-  RFC8174:
-  RFC9460:
-  RFC7301:
+  RFC3596:
   RFC3986:
+  RFC5280:
+  RFC5890:
+  RFC7301:
+  RFC8174:
+  RFC8615:
+  RFC9460:
   RFC2782:
+  RFC4985:
   RFC6762:
   RFC6763:
-  RFC5890:
-  RFC5280:
   RFC9525:
-  RFC4985:
   moq-transport: I-D.ietf-moq-transport
 
 informative:
+  RFC6943:
   RFC7838:
   RFC8499:
-  RFC6943:
   RFC9110:
+  RFC9580:
+  WebTransport: I-D.ietf-webtrans-http3
 
 --- abstract
 
-This document defines how MOQT clients discover server endpoints using
-DNS and Multicast DNS (mDNS).  It specifies SVCB and HTTPS DNS record
-mappings for the `moqt` URI scheme, SRV records as a fallback
-mechanism, and DNS-SD over mDNS for local network discovery.
+This document defines the `moqt` URI scheme, URI resolution mechanisms,
+and discovery methods for the Media over QUIC Transport (MOQT) protocol.
+It specifies the URI syntax, fragment identifiers, dereferencing
+procedures, normalization rules, and X.509 certificate matching for
+`moqt` URIs.  It also defines DNS-based resolution using SVCB, HTTPS,
+and SRV records, as well as local network discovery via mDNS and DNS-SD.
 
 --- middle
 
@@ -77,17 +86,28 @@ The Media over QUIC Transport (MOQT) protocol {{moq-transport}} identifies
 servers using the `moqt` URI scheme.  Clients establish MOQT sessions over
 native QUIC or over WebTransport ({{moq-transport, Section 3}}).
 
-This document defines three complementary discovery mechanisms:
+This document consolidates the URI definition, resolution, and discovery
+aspects of MOQT into a single specification.  It is organized as follows:
 
-SVCB and HTTPS records ({{svcb}}):
+MOQT URI Scheme ({{moqt-uri-scheme}}):
+: Defines the `moqt` URI syntax, fragment identifiers, and dereferencing
+  procedures.
+
+URI Normalization ({{uri-normalization}}):
+: Specifies canonical forms for comparison and certificate matching.
+
+X.509 Certificate Matching ({{cert-matching}}):
+: Rules for validating server certificates against `moqt` URIs.
+
+SVCB and HTTPS Records ({{svcb}}):
 : Unicast DNS records that carry connection parameters — including supported
   ALPNs — alongside address records.  Section 2.4 of {{RFC9460}} requires a
   mapping document for each URI scheme using SVCB; this document fulfills
   that requirement for `moqt`.
 
-SRV records ({{srv}}):
+SRV Records ({{srv}}):
 : Unicast DNS records that provide port and target information for load
-  balancing and failover.  They carry no ALPN or connection parameters.
+  balancing and failover.
 
 mDNS and DNS-SD ({{mdns}}):
 : Multicast DNS {{RFC6762}} and DNS Service Discovery {{RFC6763}} for local
@@ -99,6 +119,155 @@ This specification uses the terminology from {{RFC3986}}, {{RFC5280}},
 and {{RFC9525}}.
 
 {::boilerplate bcp14-tagged}
+
+# MOQT URI Scheme {#moqt-uri-scheme}
+
+An MOQT server is identified using a URI with the "moqt" scheme.  The "moqt"
+URI scheme is defined as follows, using definitions from {{RFC3986}}:
+
+~~~~~~~~~~~~~~~
+moqt-URI = "moqt" "://" authority path-abempty [ "?" query ]
+~~~~~~~~~~~~~~~
+
+The `authority` portion MUST NOT contain an empty `host` portion.
+The `moqt` URI scheme supports the `/.well-known/` path prefix defined in
+{{RFC8615}}.
+
+The `moqt` URI scheme follows the generic URI syntax of {{RFC3986}} for
+the `authority`, `path-abempty`, and `query` components, including the
+use of reserved characters and percent-encoding defined therein.  A `moqt`
+URI can be converted to an `https` URI by replacing the scheme (see
+{{moq-transport, Section 6.2.1}}), so the `path-abempty` and `query`
+components use the same syntax as `https` URIs.
+
+## Fragment Identifiers {#moqt-fragment}
+
+The media type for resources identified by `moqt` URIs is
+`application/moqt`.
+
+Fragment identifiers MAY be used with `moqt` URIs.  The fragment is not
+transmitted to the server; it is processed locally by the client after
+establishing the MOQT session.
+
+A `moqt` URI fragment MUST begin with a registered fragment type
+identifier, followed by a colon (`:`), followed by a type-specific value:
+
+~~~
+moqt://example.com/app#<type>:<value>
+~~~
+
+Fragment type identifiers MUST consist of ASCII lowercase letters,
+digits, and hyphens (`a-z`, `0-9`, `-`).  The semantics of the value
+after the colon are defined by the specification that registers the
+fragment type.
+
+## Dereferencing a MOQT URI {#dereferencing}
+
+The default operation for dereferencing a `moqt` URI is to establish a
+MOQT session to the identified server.
+
+The `moqt` URI scheme has the following security considerations:
+
+- The `authority` component is sent in the TLS SNI extension during
+  connection establishment, exposing the target server identity to
+  on-path observers.  Encrypted Client Hello (ECH) {{?RFC9580}} can
+  mitigate this exposure.
+
+- The `path-abempty` and `query` components are visible to the relay
+  that terminates the client's connection.
+
+The client resolves the `host` subcomponent of the `authority` to one or
+more network addresses, most commonly using DNS A {{RFC1035}} and AAAA
+{{RFC3596}} records.
+
+When SVCB or HTTPS records are published for the `authority`,
+a client MAY use them to learn the server's endpoints and supported ALPN
+protocols before connecting; see {{svcb}} for the `moqt`-specific SVCB
+mapping.  A client using WebTransport resolves the `https` URI derived in
+{{moq-transport, Section 6.2.1}} using HTTPS resource records as for any
+`https` origin.
+
+When SVCB and HTTPS records are not available, a client MAY fall back to
+SRV records ({{srv}}) or, on a local link, use mDNS and DNS-SD
+({{mdns}}).
+
+The URI MUST be normalized as specified in {{uri-normalization}} before
+certificate comparison.  The server's X.509 certificate MUST be validated
+against the original `moqt` URI authority as described in
+{{cert-matching}}.
+
+If the port is omitted in the URI, a default port of 443 is used.
+
+The client MAY use either native QUIC or WebTransport.  On a QUIC
+connection, the client offers any combination of MOQT ALPNs (e.g.
+`moqt-1`, `moqt-2`) and `h3` that it supports in its TLS ClientHello, in
+preference order.  If the server selects an MOQT ALPN, the session
+proceeds as described in {{moq-transport, Section 6.2.2}}.  If the server
+selects `h3`, the client establishes a WebTransport session as described
+in {{moq-transport, Section 6.2.1}}.  On a TCP+TLS connection, the client
+offers `h2` in its TLS ClientHello and establishes a WebTransport session
+as described in {{moq-transport, Section 6.2.1}}.
+
+# URI Normalization {#uri-normalization}
+
+For comparison purposes, the URI, or part of the URI, is put in a
+canonical form and then bitwise compared to the data from the X.509
+certificate after putting it into canonical form.  This section defines
+how to create the canonical form.
+
+The URI MUST be normalized using Case Normalization and Percent-Encoding
+Normalization as specified in Sections 6.2.2.1 and 6.2.2.2 of
+{{RFC3986}}.
+
+The "." and ".." sequences have no special meaning in MOQT URIs and are
+not changed during normalization.
+
+If the port is missing, it MUST be replaced with the default port (443).
+
+If the URI reg-name ends in a ".", that MUST be removed.
+
+Internationalized Domain Names in the reg-name MUST be converted to IDNA
+format as defined in {{RFC5890}}.
+
+When comparing hostnames, wildcard matching MUST NOT be supported and
+the "*" character has no special meaning.
+
+
+# X.509 Certificate Matching {#cert-matching}
+
+The fields referenced in this section are defined in {{RFC5280}} and
+{{RFC4985}}.
+
+The CN-ID field as defined in {{RFC9525}} MUST NOT be used.
+
+If any one of the following identifiers in the subjectAltName of the
+certificate matches the URI, then the certificate is valid for that URI.
+
+* dNSName: The canonicalized dNSName from the certificate matches the
+  host part of the authority from the canonicalized URI.
+
+* iPAddress: The host part of the authority from the canonicalized URI,
+  parsed as an IP address, matches the iPAddress value from the
+  certificate.
+
+* uniformResourceIdentifier: The canonicalized uniformResourceIdentifier
+  MUST match the canonicalized URI with the query and fragment removed.
+
+* SRVName: Matched as described in Section 4 of {{RFC4985}} using the
+  host part of the authority from the canonicalized URI as the name
+  restriction and a SRVName restrictions of "_moqt".
+
+## SVCB and SRV Indirection
+
+When a client is redirected to a different target host, certificate
+matching MUST be performed against the authority from the original
+`moqt` URI, not the resolved target name.  This is consistent with the
+requirements in {{RFC9460, Section 2.3}} and with the SRV rules in
+{{srv}} of this document.
+
+SRVName matching ({{RFC4985}}) applies regardless of whether the client
+discovered the endpoint via SRV records or SVCB records, because the
+`_moqt` service type is the same in both cases.
 
 # SVCB and HTTPS Records for MOQT {#svcb}
 
@@ -113,7 +282,7 @@ SVCB RRs (RR type 64):
 HTTPS RRs (RR type 65):
 : For WebTransport MOQT endpoints.  MAY carry both `moqt` and HTTP ALPN
   (`h3`).  `moqt` URIs using WebTransport map to `https`
-  URIs ({{moq-transport, Section 3}}); both schemes default to port 443.
+  URIs ({{moq-transport, Section 6.2.1}}); both schemes default to port 443.
 
 ## Record Names {#svcb-name}
 
@@ -143,7 +312,7 @@ implicit default ALPN.  Every ServiceMode record MUST include an explicit
 The following ALPN identifiers are defined for MOQT:
 
 `moqt`:
-: Native QUIC, published MOQT specification ({{!RFC7301}}).  MUST appear
+: Native QUIC, published MOQT specification ({{RFC7301}}).  MUST appear
   in SVCB records; MAY appear in HTTPS records when the server supports
   both native QUIC and WebTransport.
 
@@ -261,67 +430,6 @@ key-value pair:
 
 A client MUST treat an instance whose TXT record does not contain a
 recognized `alpn` value as unusable.
-
-# URI Normalization
-
-For comparison purposes, the URI, or part of the URI, is put in a
-canonical form and then bitwise compared to the data from the X.509
-certificate after putting it into canonical form. This section defines
-how to create the canonical form.
-
-The URI MUST be normalized using Case Normalization and Percent-Encoding
-Normalization as specified in Sections 6.2.2.1 and 6.2.2.2 of
-{{RFC3986}}.
-
-The "." and ".." sequences have no special meaning in MOQT URIs and are
-not changed during normalization.
-
-If the port is missing, it MUST be replaced with the default port (443).
-
-If the URI reg-name ends in a ".", that MUST be removed.
-
-Internationalized Domain Names in the reg-name MUST be converted to IDNA
-format as defined in {{RFC5890}}.
-
-When comparing hostnames, wildcard matching MUST NOT be supported and
-the "*" character has no special meaning.
-
-
-# X.509 Certificate Matching
-
-The fields referenced in this section are defined in {{RFC5280}} and
-{{RFC4985}}.
-
-The CN-ID field as defined in {{RFC9525}} MUST NOT be used.
-
-If any one of the following identifiers in the subjectAltName of the
-certificate matches the URI, then the certificate is valid for that URI.
-
-* dNSName: The canonicalized dNSName from the certificate matches the
-  host part of the authority from the canonicalized URI.
-
-* iPAddress: The host part of the authority from the canonicalized URI,
-  parsed as an IP address, matches the iPAddress value from the
-  certificate.
-
-* uniformResourceIdentifier: The canonicalized uniformResourceIdentifier
-  MUST match the canonicalized URI with the query and fragment removed.
-
-* SRVName: Matched as described in Section 4 of {{RFC4985}} using the
-  host part of the authority from the canonicalized URI as the name
-  restriction and a SRVName restrictions of "_moqt".
-
-## SVCB and SRV Indirection
-
-When a client is redirected to a different target host, certificate
-matching MUST be performed against the authority from the original
-`moqt` URI, not the resolved target name.  This is consistent with the requirements in
-{{RFC9460, Section 2.3}} and with the SRV rules in {{srv}} of this
-document.
-
-SRVName matching ({{RFC4985}}) applies regardless of whether the client
-discovered the endpoint via SRV records or SVCB records, because the
-`_moqt` service type is the same in both cases.
 
 # Security Considerations {#security-considerations}
 
