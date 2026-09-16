@@ -314,8 +314,7 @@ implicit default ALPN.  Every ServiceMode record MUST include an explicit
 The following ALPN identifiers are defined for MOQT:
 
 `moqt`:
-: Native QUIC, published MOQT specification ({{RFC7301}}).  SVCB records
-  only.
+: Native QUIC, published MOQT specification ({{RFC7301}}). 
 
 `moqt-N` (where N is a non-negative integer):
 : Native QUIC, draft version N (e.g., `moqt-15`).  Ephemeral; MUST NOT
