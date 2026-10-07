@@ -494,4 +494,5 @@ TODO
 # Acknowledgments
 {:numbered="false"}
 
-TODO: Acknowledgments to be added.
+Huge thanks to high quality review from Bejamin Schwartz.
+
