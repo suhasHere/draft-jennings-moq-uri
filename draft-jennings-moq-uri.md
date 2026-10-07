@@ -166,48 +166,44 @@ fragment type.
 ## Dereferencing a MOQT URI {#dereferencing}
 
 The default operation for dereferencing a `moqt` URI is to establish a
-MOQT session to the identified server.
+MOQT session to the identified server.  See
+{{security-considerations}} for the security implications of
+dereferencing a `moqt` URI.
 
-The `moqt` URI scheme has the following security considerations:
+A `moqt` URI can be dereferenced over two distinct transports
+({{moq-transport, Section 3}}):
 
-- The `authority` component is sent in the TLS SNI extension during
-  connection establishment, exposing the target server identity to
-  on-path observers.  Encrypted Client Hello (ECH) {{?RFC9580}} can
-  mitigate this exposure.
+* Native QUIC, where the client opens a QUIC connection directly to the
+  authority of the `moqt` URI and negotiates a `moqt`/`moqt-N` ALPN.
+* WebTransport, where the `moqt` URI is first mapped to an `https` URI
+  ({{moq-transport, Section 6.2.1}}) and the client establishes a
+  WebTransport session over HTTP/3 (ALPN `h3`) or HTTP/2 (ALPN `h2`)
+  to that `https` origin.
 
-- The `path-abempty` and `query` components are visible to the relay
-  that terminates the client's connection.
+The two transports use different DNS resolution and certificate
+validation procedures, summarized below.
 
-The client resolves the `host` subcomponent of the `authority` to one or
-more network addresses, most commonly using DNS A {{RFC1035}} and AAAA
-{{RFC3596}} records.
+For the native QUIC transport, when `moqt`-specific SVCB records are
+published for the `authority` ({{svcb}}), the client MAY use them to
+learn the server's endpoints and `moqt`/`moqt-N` ALPNs before
+connecting.  When those records are not available, the client falls
+back to SRV records ({{srv}}) or, on a local link, uses mDNS and DNS-SD
+({{mdns}}).  Otherwise the client resolves the `host` subcomponent of
+the `authority` to one or more network addresses using DNS A
+{{RFC1035}} and AAAA {{RFC3596}} records.  If the port is omitted in
+the URI, a default port of 443 is used.  The server's X.509
+certificate MUST be validated against the original `moqt` URI
+authority as described in {{cert-matching}}, and the URI MUST be
+normalized as specified in {{uri-normalization}} before certificate
+comparison.
 
-When SVCB records are published for the `authority`, a client MAY use
-them to learn the server's endpoints and supported ALPN protocols before
-connecting; see {{svcb}} for the `moqt`-specific SVCB mapping.  A client
-using WebTransport resolves the `https` URI derived in
-{{moq-transport, Section 6.2.1}} using HTTPS resource records as for any
-`https` origin.
-
-When SVCB records are not available, a client MAY fall back to SRV
-records ({{srv}}) or, on a local link, use mDNS and DNS-SD ({{mdns}}).
-
-The URI MUST be normalized as specified in {{uri-normalization}} before
-certificate comparison.  The server's X.509 certificate MUST be validated
-against the original `moqt` URI authority as described in
-{{cert-matching}}.
-
-If the port is omitted in the URI, a default port of 443 is used.
-
-The client MAY use either native QUIC or WebTransport.  On a QUIC
-connection, the client offers any combination of MOQT ALPNs (e.g.
-`moqt-1`, `moqt-2`) and `h3` that it supports in its TLS ClientHello, in
-preference order.  If the server selects an MOQT ALPN, the session
-proceeds as described in {{moq-transport, Section 6.2.2}}.  If the server
-selects `h3`, the client establishes a WebTransport session as described
-in {{moq-transport, Section 6.2.1}}.  On a TCP+TLS connection, the client
-offers `h2` in its TLS ClientHello and establishes a WebTransport session
-as described in {{moq-transport, Section 6.2.1}}.
+For the WebTransport transport, the client applies standard `https`
+processing to the derived `https` URI: HTTPS resource records
+({{RFC9460}}) are resolved as for any `https` origin, and the server's
+X.509 certificate is validated against that `https` URI using standard
+Web PKI procedures (see {{cert-matching}} for how this differs from
+`moqt`-specific matching).  No `moqt`-specific DNS records are
+consulted on this path.
 
 # URI Normalization {#uri-normalization}
 
@@ -271,9 +267,9 @@ the `moqt`-specific matching rules above do not apply.  The TLS SNI
 extension MUST contain the host from the derived `https` URI.
 
 The `moqt`-specific certificate matching defined in this section applies
-only to native QUIC connections where the client connects directly using
-an MOQT ALPN.  On such connections the TLS SNI extension MUST contain
-the host from the original `moqt` URI.
+only to native QUIC connections where the client connects directly to
+the authority of the `moqt` URI.  On such connections the TLS SNI
+extension MUST contain the host from the original `moqt` URI.
 
 ## SVCB and SRV Indirection
 
@@ -290,17 +286,19 @@ discovered the endpoint via SRV records or SVCB records, because the
 
 # SVCB Records for MOQT {#svcb}
 
-MOQT defines SVCB records (RR type 64) for native QUIC endpoints.
+MOQT defines SVCB records {{RFC9460}} for native QUIC endpoints.
 For WebTransport, a `moqt` URI maps to an `https` URI
 ({{moq-transport, Section 6.2.1}}); the client resolves that `https`
 URI using HTTPS resource records following standard `https` processing
-rules ({{RFC9460, Section 9.1}}).  No MOQT-specific definitions are
-needed for HTTPS records.
+rules ({{RFC9460, Section 9.1}}).
+
+TODO: Any MOQT-specific HTTPS record text (for example, additional
+SvcParams that apply only to the WebTransport mapping) will be added
+in a future revision.
 
 ## SVCB Record Name {#svcb-name}
 
-For a `moqt` URI with host `H` and port `P`, the SVCB (type 64) owner
-name is:
+For a `moqt` URI with host `H` and port `P`, the SVCB owner name is:
 
 * `_moqt.H` when `P` is 443 or omitted (defaulting to 443).
 * `_P._moqt.H` when `P` is any other value.
@@ -344,8 +342,8 @@ misleading.
 
 ### port
 
-When present, `port` specifies the UDP port (native QUIC or WebTransport
-over HTTP/3).  When absent, the port from the `moqt` URI is used,
+When present, `port` specifies the UDP port for the native QUIC
+endpoint.  When absent, the port from the `moqt` URI is used,
 defaulting to 443.
 
 ### ech
@@ -371,14 +369,17 @@ local client policy and is out of scope for this document.
 SRV records {{RFC2782}} provide port and target for load balancing and
 failover but carry no ALPN or connection parameters.  SRV support is
 retained because it is required by DNS-SD ({{mdns}}) and provides a
-transitional fallback for deployments where SVCB infrastructure is not
-yet available.
+transitional fallback for the native QUIC path in deployments where
+SVCB infrastructure is not yet available.  SRV records are not
+consulted on the WebTransport path; WebTransport clients resolve the
+derived `https` URI using HTTPS resource records as described in
+{{dereferencing}}.
 
 ## SRV Record Names
 
 For a `moqt` URI with host `H`, SRV queries are performed at:
 
-* `_moqt._udp.H` (both native QUIC and WebTransport over HTTP/3 use UDP).
+* `_moqt._udp.H`
 
 ## Using SRV Target and Port
 
@@ -439,7 +440,18 @@ mechanism for conveying ALPN information in DNS-SD.
 
 # Security Considerations {#security-considerations}
 
-TODO
+Dereferencing a `moqt` URI exposes the following information to on-path
+observers and intermediaries:
+
+- The `authority` component is sent in the TLS SNI extension during
+  connection establishment, exposing the target server identity to
+  on-path observers.  Encrypted Client Hello (ECH) {{?RFC9580}} can
+  mitigate this exposure.
+
+- The `path-abempty` and `query` components are visible to the relay
+  that terminates the client's connection.
+
+TODO: Expand this section with additional considerations.
 
 # IANA Considerations
 
