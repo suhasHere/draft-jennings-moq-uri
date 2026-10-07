@@ -75,8 +75,8 @@ This document defines the `moqt` URI scheme, URI resolution mechanisms,
 and discovery methods for the Media over QUIC Transport (MOQT) protocol.
 It specifies the URI syntax, fragment identifiers, dereferencing
 procedures, normalization rules, and X.509 certificate matching for
-`moqt` URIs.  It also defines DNS-based resolution using SVCB, HTTPS,
-and SRV records, as well as local network discovery via mDNS and DNS-SD.
+`moqt` URIs.  It also defines DNS-based resolution using SVCB and SRV
+records, as well as local network discovery via mDNS and DNS-SD.
 
 --- middle
 
@@ -99,11 +99,13 @@ URI Normalization ({{uri-normalization}}):
 X.509 Certificate Matching ({{cert-matching}}):
 : Rules for validating server certificates against `moqt` URIs.
 
-SVCB and HTTPS Records ({{svcb}}):
+SVCB Records ({{svcb}}):
 : Unicast DNS records that carry connection parameters — including supported
-  ALPNs — alongside address records.  Section 2.4 of {{RFC9460}} requires a
-  mapping document for each URI scheme using SVCB; this document fulfills
-  that requirement for `moqt`.
+  ALPNs — alongside address records for native QUIC endpoints.  Section 2.4
+  of {{RFC9460}} requires a mapping document for each URI scheme using SVCB;
+  this document fulfills that requirement for `moqt`.  For WebTransport,
+  standard HTTPS resource record processing applies to the derived `https`
+  URI.
 
 SRV Records ({{srv}}):
 : Unicast DNS records that provide port and target information for load
@@ -180,16 +182,15 @@ The client resolves the `host` subcomponent of the `authority` to one or
 more network addresses, most commonly using DNS A {{RFC1035}} and AAAA
 {{RFC3596}} records.
 
-When SVCB or HTTPS records are published for the `authority`,
-a client MAY use them to learn the server's endpoints and supported ALPN
-protocols before connecting; see {{svcb}} for the `moqt`-specific SVCB
-mapping.  A client using WebTransport resolves the `https` URI derived in
+When SVCB records are published for the `authority`, a client MAY use
+them to learn the server's endpoints and supported ALPN protocols before
+connecting; see {{svcb}} for the `moqt`-specific SVCB mapping.  A client
+using WebTransport resolves the `https` URI derived in
 {{moq-transport, Section 6.2.1}} using HTTPS resource records as for any
 `https` origin.
 
-When SVCB and HTTPS records are not available, a client MAY fall back to
-SRV records ({{srv}}) or, on a local link, use mDNS and DNS-SD
-({{mdns}}).
+When SVCB records are not available, a client MAY fall back to SRV
+records ({{srv}}) or, on a local link, use mDNS and DNS-SD ({{mdns}}).
 
 The URI MUST be normalized as specified in {{uri-normalization}} before
 certificate comparison.  The server's X.509 certificate MUST be validated
@@ -240,6 +241,9 @@ The fields referenced in this section are defined in {{RFC5280}} and
 
 The CN-ID field as defined in {{RFC9525}} MUST NOT be used.
 
+Clients MUST implement dNSName and iPAddress matching.  Support for
+uniformResourceIdentifier and SRVName matching is OPTIONAL.
+
 If any one of the following identifiers in the subjectAltName of the
 certificate matches the URI, then the certificate is valid for that URI.
 
@@ -257,51 +261,49 @@ certificate matches the URI, then the certificate is valid for that URI.
   host part of the authority from the canonicalized URI as the name
   restriction and a SRVName restrictions of "_moqt".
 
+## WebTransport Certificate Validation
+
+When connecting via WebTransport, the TLS handshake terminates at an
+`https` origin derived from the `moqt` URI ({{moq-transport,
+Section 6.2.1}}).  In this case, the client validates the server
+certificate against that `https` URI using standard Web PKI procedures;
+the `moqt`-specific matching rules above do not apply.  The TLS SNI
+extension MUST contain the host from the derived `https` URI.
+
+The `moqt`-specific certificate matching defined in this section applies
+only to native QUIC connections where the client connects directly using
+an MOQT ALPN.  On such connections the TLS SNI extension MUST contain
+the host from the original `moqt` URI.
+
 ## SVCB and SRV Indirection
 
-When a client is redirected to a different target host, certificate
-matching MUST be performed against the authority from the original
-`moqt` URI, not the resolved target name.  This is consistent with the
-requirements in {{RFC9460, Section 2.3}} and with the SRV rules in
-{{srv}} of this document.
+When a client is redirected to a different target host via SVCB or SRV,
+certificate matching MUST be performed against the authority from the
+original `moqt` URI, not the resolved target name.  The TLS SNI
+extension likewise MUST contain the original authority's host.  This is
+consistent with the requirements in {{RFC9460, Section 2.3}} and with
+the SRV rules in {{srv}} of this document.
 
 SRVName matching ({{RFC4985}}) applies regardless of whether the client
 discovered the endpoint via SRV records or SVCB records, because the
 `_moqt` service type is the same in both cases.
 
-# SVCB and HTTPS Records for MOQT {#svcb}
+# SVCB Records for MOQT {#svcb}
 
-## Record Types
+MOQT defines SVCB records (RR type 64) for native QUIC endpoints.
+For WebTransport, a `moqt` URI maps to an `https` URI
+({{moq-transport, Section 6.2.1}}); the client resolves that `https`
+URI using HTTPS resource records following standard `https` processing
+rules ({{RFC9460, Section 9.1}}).  No MOQT-specific definitions are
+needed for HTTPS records.
 
-MOQT uses two DNS record types:
-
-SVCB RRs (RR type 64):
-: For native QUIC MOQT endpoints.  Published at a `moqt`-specific owner
-  name ({{svcb-name}}); carries `moqt`/`moqt-N` ALPNs only.
-
-HTTPS RRs (RR type 65):
-: For WebTransport MOQT endpoints.  MAY carry both `moqt` and HTTP ALPN
-  (`h3`).  `moqt` URIs using WebTransport map to `https`
-  URIs ({{moq-transport, Section 6.2.1}}); both schemes default to port 443.
-
-## Record Names {#svcb-name}
-
-### SVCB Record Name
+## SVCB Record Name {#svcb-name}
 
 For a `moqt` URI with host `H` and port `P`, the SVCB (type 64) owner
 name is:
 
 * `_moqt.H` when `P` is 443 or omitted (defaulting to 443).
 * `_P._moqt.H` when `P` is any other value.
-
-### HTTPS Record Name
-
-For a `moqt` URI with host `H` and port `P`, the HTTPS (type 65) owner
-name is:
-
-* `H` when `P` is 443 or omitted (defaulting to 443).
-* `_P._https.H` when `P` is any other value, as specified in
-  {{RFC9460, Section 9.1}}.
 
 ## Default ALPN Identifiers {#default-alpn}
 
@@ -312,16 +314,11 @@ implicit default ALPN.  Every ServiceMode record MUST include an explicit
 The following ALPN identifiers are defined for MOQT:
 
 `moqt`:
-: Native QUIC, published MOQT specification ({{RFC7301}}).  MUST appear
-  in SVCB records; MAY appear in HTTPS records when the server supports
-  both native QUIC and WebTransport.
+: Native QUIC, published MOQT specification ({{RFC7301}}). 
 
 `moqt-N` (where N is a non-negative integer):
 : Native QUIC, draft version N (e.g., `moqt-15`).  Ephemeral; MUST NOT
-  be used in production.  Same record-placement rules as `moqt`.
-
-`h3`:
-: WebTransport over HTTP/3 ({{moq-transport}}).  HTTPS records only.
+  be used in production.  SVCB records only.
 
 A client MUST treat a record whose `alpn` contains none of its supported
 identifiers as unusable and proceed as if no record were present.
@@ -353,7 +350,7 @@ defaulting to 443.
 
 ### ech
 
-ECH {{?RFC9580}} MAY appear in SVCB or HTTPS records.  Clients that
+ECH {{?RFC9580}} MAY appear in SVCB records.  Clients that
 support ECH SHOULD use it; without it, the `moqt` URI authority is
 exposed in the TLS SNI extension ({{moq-transport}}).
 
@@ -372,7 +369,10 @@ local client policy and is out of scope for this document.
 # SRV Records for MOQT {#srv}
 
 SRV records {{RFC2782}} provide port and target for load balancing and
-failover but carry no ALPN or connection parameters.
+failover but carry no ALPN or connection parameters.  SRV support is
+retained because it is required by DNS-SD ({{mdns}}) and provides a
+transitional fallback for deployments where SVCB infrastructure is not
+yet available.
 
 ## SRV Record Names
 
@@ -395,12 +395,12 @@ When SRV records are found:
 
 ## Interaction with SVCB
 
-When SVCB (type 64) or HTTPS (type 65) records are available and usable
-for a `moqt` authority, clients SHOULD prefer them over SRV records and
-MAY skip the SRV query entirely.
+When SVCB records are available and usable for a `moqt` authority,
+clients SHOULD prefer them over SRV records and MAY skip the SRV query
+entirely.
 
-Operators SHOULD publish SVCB and/or HTTPS records rather than (or in
-addition to) SRV records for new deployments.
+Operators SHOULD publish SVCB records rather than (or in addition to)
+SRV records for new deployments.
 
 # mDNS and DNS-SD Discovery for MOQT {#mdns}
 
@@ -430,6 +430,12 @@ key-value pair:
 
 A client MUST treat an instance whose TXT record does not contain a
 recognized `alpn` value as unusable.
+
+## Interaction with SVCB
+
+This document does not define SVCB-based service parameter delivery
+for MOQT DNS-SD instances; the TXT record ({{mdns-txt}}) is the sole
+mechanism for conveying ALPN information in DNS-SD.
 
 # Security Considerations {#security-considerations}
 
