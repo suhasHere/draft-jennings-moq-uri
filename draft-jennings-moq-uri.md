@@ -200,7 +200,7 @@ comparison.
 For the WebTransport transport, the client applies standard `https`
 processing to the derived `https` URI: HTTPS resource records
 ({{RFC9460}}) are resolved as for any `https` origin, and the server's
-X.509 certificate matching following the same procedures as defined 
+X.509 certificate matching following the same procedures as defined
 for native QUIC.  No `moqt`-specific DNS records are
 consulted on this path.
 
@@ -236,7 +236,7 @@ The fields referenced in this section are defined in {{RFC5280}} and
 
 The CN-ID field as defined in {{RFC9525}} MUST NOT be used.
 
-Clients MUST implement dNSName, uniformResourceIdentifier and 
+Clients MUST implement dNSName, uniformResourceIdentifier and
 iPAddress matching.
 
 If any one of the following identifiers in the subjectAltName of the
@@ -307,7 +307,7 @@ implicit default ALPN.  Every ServiceMode record MUST include an explicit
 The following ALPN identifiers are defined for MOQT:
 
 `moqt`:
-: Connected with raw QUIC, published MOQT specification. 
+: Connected with raw QUIC, published MOQT specification.
 
 `moqt-N` (where N is a non-negative integer):
 : Connect with raw QUIC using draft version N (e.g., `moqt-15`) of
@@ -487,7 +487,7 @@ References: This document
 
 ## ALPN Registration
 
-TODO 
+TODO
 
 --- back
 
