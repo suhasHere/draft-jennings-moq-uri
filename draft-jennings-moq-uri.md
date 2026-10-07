@@ -237,8 +237,8 @@ The fields referenced in this section are defined in {{RFC5280}} and
 
 The CN-ID field as defined in {{RFC9525}} MUST NOT be used.
 
-Clients MUST implement dNSName and iPAddress matching.  Support for
-uniformResourceIdentifier and SRVName matching is OPTIONAL.
+Clients MUST implement dNSName, uniformResourceIdentifier and 
+iPAddress matching.
 
 If any one of the following identifiers in the subjectAltName of the
 certificate matches the URI, then the certificate is valid for that URI.
@@ -312,11 +312,13 @@ implicit default ALPN.  Every ServiceMode record MUST include an explicit
 The following ALPN identifiers are defined for MOQT:
 
 `moqt`:
-: Native QUIC, published MOQT specification ({{RFC7301}}). 
+: Connected with raw QUIC, published MOQT specification. 
 
 `moqt-N` (where N is a non-negative integer):
-: Native QUIC, draft version N (e.g., `moqt-15`).  Ephemeral; MUST NOT
-  be used in production.  SVCB records only.
+: Connect with raw QUIC using draft version N (e.g., `moqt-15`) of
+  the MOQT Transport draft.
+
+Note to RFC Editor: Remove this bullet point in RFC
 
 A client MUST treat a record whose `alpn` contains none of its supported
 identifiers as unusable and proceed as if no record were present.
