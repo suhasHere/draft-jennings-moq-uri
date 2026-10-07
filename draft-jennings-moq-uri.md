@@ -200,9 +200,8 @@ comparison.
 For the WebTransport transport, the client applies standard `https`
 processing to the derived `https` URI: HTTPS resource records
 ({{RFC9460}}) are resolved as for any `https` origin, and the server's
-X.509 certificate is validated against that `https` URI using standard
-Web PKI procedures (see {{cert-matching}} for how this differs from
-`moqt`-specific matching).  No `moqt`-specific DNS records are
+X.509 certificate matching following the same procedures as defined 
+for native QUIC.  No `moqt`-specific DNS records are
 consulted on this path.
 
 # URI Normalization {#uri-normalization}
@@ -292,10 +291,6 @@ For WebTransport, a `moqt` URI maps to an `https` URI
 URI using HTTPS resource records following standard `https` processing
 rules ({{RFC9460, Section 9.1}}).
 
-TODO: Any MOQT-specific HTTPS record text (for example, additional
-SvcParams that apply only to the WebTransport mapping) will be added
-in a future revision.
-
 ## SVCB Record Name {#svcb-name}
 
 For a `moqt` URI with host `H` and port `P`, the SVCB owner name is:
@@ -372,10 +367,7 @@ SRV records {{RFC2782}} provide port and target for load balancing and
 failover but carry no ALPN or connection parameters.  SRV support is
 retained because it is required by DNS-SD ({{mdns}}) and provides a
 transitional fallback for the native QUIC path in deployments where
-SVCB infrastructure is not yet available.  SRV records are not
-consulted on the WebTransport path; WebTransport clients resolve the
-derived `https` URI using HTTPS resource records as described in
-{{dereferencing}}.
+SVCB infrastructure is not yet available.
 
 ## SRV Record Names
 
@@ -473,11 +465,29 @@ and Transport Protocol Port Number Registry":
 This registration covers use of the `_moqt._udp` service label in SRV
 records ({{RFC2782}}) and DNS-SD ({{RFC6763}}).
 
+## URI Scheme Registrations
+
+This document requests the registration of the following URI schemes in the
+"Uniform Resource Identifier (URI) Schemes" registry, per {{!RFC7595}}:
+
+### "moqt" URI Scheme Registration
+
+Scheme name: moqt
+
+Status: Permanent
+
+Applications/protocols that use this scheme name: Media over QUIC Transport
+(MOQT) over native QUIC or WebTransport, as defined in this document.
+
+Contact: IETF MoQ Working Group (moq@ietf.org)
+
+Change controller: IETF
+
+References: This document
+
 ## ALPN Registration
 
-The ALPN identifier `moqt` is already registered in the "TLS Application-
-Layer Protocol Negotiation (ALPN) Protocol IDs" registry by {{moq-transport}}.
-No additional registrations are requested by this document.
+TODO 
 
 --- back
 
