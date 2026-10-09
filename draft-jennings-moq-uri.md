@@ -140,28 +140,33 @@ the `authority`, `path-abempty`, and `query` components, including the
 use of reserved characters and percent-encoding defined therein.  A `moqt`
 URI can be converted to an `https` URI by replacing the scheme (see
 {{moq-transport, Section 6.2.1}}), so the `path-abempty` and `query`
-components use the same syntax as `https` URIs.
+components all the same characters as `https` URIs.
 
-## Fragment Identifiers {#moqt-fragment}
-
-The media type for resources identified by `moqt` URIs is
-`application/moqt`.
-
-Fragment identifiers MAY be used with `moqt` URIs.  The fragment is not
-transmitted to the server; it is processed locally by the client after
-establishing the MOQT session.
-
-A `moqt` URI fragment MUST begin with a registered fragment type
-identifier, followed by a colon (`:`), followed by a type-specific value:
+The query component is defined to the following ABNF syntax
 
 ~~~
-moqt://example.com/app#<type>:<value>
+ query = parameter *( "&" parameter )
+ parameter = ( key "=" value ) / other
+ key = [kspace ":"]  *( qchar / ":"  )
+ keyspace = *( qchar )
+ value = *( qchar )  / ":"
+ tag = *(qchar )  / ":"
+ qchar = unreserved / pct-encoded / "!" / "$"  / "'" / "(" / ")"
+                 / "*" / "+" / "," / ";"  / "@"
 ~~~
 
-Fragment type identifiers MUST consist of ASCII lowercase letters,
-digits, and hyphens (`a-z`, `0-9`, `-`).  The semantics of the value
-after the colon are defined by the specification that registers the
-fragment type.
+Any set of characters that is a valid query for a HTTP URI is also a
+valid query for a moqt URI and visa versa. This additional syntax gives a
+way to talk about the parts query that look like
+~~~
+ moqt://example.com/scope?namespace=123&track=audio&wt
+~~~
+
+For keys that have a ":" in them the portion of the key before the first
+":" is referred to as the key space.  For keys with a key space, the
+semantics of the value after are defined by the specification that
+registered the fragment key space in the IANA keyspace registry.
+
 
 ## Dereferencing a MOQT URI {#dereferencing}
 
@@ -448,6 +453,25 @@ observers and intermediaries:
 TODO: Expand this section with additional considerations.
 
 # IANA Considerations
+
+
+## MoQ URI Keyspace Registry
+
+This document establishes the "MOQT URI Key Space" registry.
+
+New key spaces are registered using the Specification Required policy
+{{!RFC8126}}.
+
+Each entry in the registry contains the following fields:
+
+| Key Space     | Description | Specification | Contact       |
+|:--------------|:------------|:--------------|:--------------|
+|               |             |               |               |
+
+This registry is initially empty.
+
+TODO - more work needed on this section.
+
 
 ## Service Name Registration {#iana-service}
 
