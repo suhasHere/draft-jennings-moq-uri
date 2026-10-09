@@ -73,7 +73,7 @@ informative:
 
 This document defines the `moqt` URI scheme, URI resolution mechanisms,
 and discovery methods for the Media over QUIC Transport (MOQT) protocol.
-It specifies the URI syntax, fragment identifiers, dereferencing
+It specifies the URI syntax, query parameter processing, dereferencing
 procedures, normalization rules, and X.509 certificate matching for
 `moqt` URIs.  It also defines DNS-based resolution using SVCB and SRV
 records, as well as local network discovery via mDNS and DNS-SD.
@@ -90,8 +90,8 @@ This document consolidates the URI definition, resolution, and discovery
 aspects of MOQT into a single specification.  It is organized as follows:
 
 MOQT URI Scheme ({{moqt-uri-scheme}}):
-: Defines the `moqt` URI syntax, fragment identifiers, and dereferencing
-  procedures.
+: Defines the `moqt` URI syntax, query parameter processing, and
+  dereferencing procedures.
 
 URI Normalization ({{uri-normalization}}):
 : Specifies canonical forms for comparison and certificate matching.
@@ -136,32 +136,72 @@ The `moqt` URI scheme supports the `/.well-known/` path prefix defined in
 {{RFC8615}}.
 
 The `moqt` URI scheme follows the generic URI syntax of {{RFC3986}} for
-the `authority`, `path-abempty`, and `query` components, including the
-use of reserved characters and percent-encoding defined therein.  A `moqt`
-URI can be converted to an `https` URI by replacing the scheme (see
-{{moq-transport, Section 6.2.1}}), so the `path-abempty` and `query`
-components use the same syntax as `https` URIs.
+the `authority`, `path-abempty`, and `query` components.  A `moqt` URI can
+be converted to an `https` URI by replacing the scheme (see
+{{moq-transport, Section 6.2.1}}), so the `path-abempty` component uses the
+same syntax as an `https` URI.  MOQT further constrains the query component
+to the parameter syntax below and defines which parameters are consumed by
+the client before the remaining query is sent to the relay.  Every query
+conforming to this MOQT syntax is a valid RFC 3986 query, but not every
+RFC 3986 query is a valid MOQT query.
 
-## Fragment Identifiers {#moqt-fragment}
+## Query Parameters {#moqt-query}
 
-The media type for resources identified by `moqt` URIs is
-`application/moqt`.
+The query component, when present, is a sequence of parameters separated by
+ampersands (`&`).  In each parameter, the first equals sign (`=`), if any,
+separates the key from its value.  A parameter without an equals sign is a
+flag parameter with an empty value.  An empty query is permitted, but empty
+parameters are not.
 
-Fragment identifiers MAY be used with `moqt` URIs.  The fragment is not
-transmitted to the server; it is processed locally by the client after
-establishing the MOQT session.
+The following ABNF uses the `unreserved` and `pct-encoded` rules from
+{{RFC3986}}.  Raw ampersands separate parameters.  The first raw equals sign
+separates a key from its value; additional equals signs are part of the
+value.  A literal ampersand in a key or value MUST be percent-encoded.
 
-A `moqt` URI fragment MUST begin with a registered fragment type
-identifier, followed by a colon (`:`), followed by a type-specific value:
+~~~ abnf
+query = [ parameter *( "&" parameter ) ]
+parameter = key [ "=" value ]
+key = unqualified-key / keyspace ":" key-name
+unqualified-key = 1*qchar
+keyspace = 1*( %x61-7A / DIGIT / "-" ) ; lowercase ASCII letters, digits, hyphen
+key-name = 1*qchar
+value = *( qchar / ":" / "=" )
+qchar = unreserved / pct-encoded / "!" / "$" / "'" / "(" / ")"
+      / "*" / "+" / "," / ";" / "@" / "/" / "?"
+~~~
+
+The query grammar intentionally assigns structure to raw `&` and `=`
+characters.  Clients MUST identify parameter separators before
+percent-decoding keys or values, so percent-encoded delimiters remain data.
+Reserved characters not admitted by the productions above MUST be
+percent-encoded when used as data.  A literal colon in a key introduces a
+keyspace; a literal colon in a value is data.  Keyspace identifiers are
+lowercase ASCII and are compared exactly as written.
+
+An unqualified key, or a key whose keyspace is not registered or not
+supported by the client, is relay-facing and MUST be forwarded unchanged.
+A specification defining a registered keyspace MUST define the forwarding
+disposition of each parameter that it defines.  A client that
+implements that specification MUST consume client-local parameters and MUST
+omit them when constructing the request to the relay.  Unrecognized
+parameters MUST be preserved and forwarded unchanged.  The relative order
+and encoded spelling of forwarded parameters MUST be preserved.  If all
+parameters are consumed locally, the client MUST omit the query delimiter.
+
+These rules apply to both transports.  For WebTransport, the client removes
+client-local parameters before constructing the derived `https` request URI.
+For native QUIC, it removes them before constructing the PATH setup option.
+For example, a keyspace specification could define `client:track=audio` as
+client-local while leaving `namespace=123` relay-facing:
 
 ~~~
-moqt://example.com/app#<type>:<value>
+moqt://example.com/scope?namespace=123&client:track=audio&wt
 ~~~
 
-Fragment type identifiers MUST consist of ASCII lowercase letters,
-digits, and hyphens (`a-z`, `0-9`, `-`).  The semantics of the value
-after the colon are defined by the specification that registers the
-fragment type.
+Here, the client consumes `client:track=audio`, then forwards
+`namespace=123&wt` to the relay.  A keyspace specification defines the
+semantics of its keys and their forwarding disposition.
+
 
 ## Dereferencing a MOQT URI {#dereferencing}
 
@@ -250,7 +290,7 @@ certificate matches the URI, then the certificate is valid for that URI.
   certificate.
 
 * uniformResourceIdentifier: The canonicalized uniformResourceIdentifier
-  MUST match the canonicalized URI with the query and fragment removed.
+  MUST match the canonicalized URI with the query removed.
 
 * SRVName: Matched as described in Section 4 of {{RFC4985}} using the
   host part of the authority from the canonicalized URI as the name
@@ -442,12 +482,32 @@ observers and intermediaries:
   on-path observers.  Encrypted Client Hello (ECH) {{?RFC9580}} can
   mitigate this exposure.
 
-- The `path-abempty` and `query` components are visible to the relay
-  that terminates the client's connection.
+- The `path-abempty` component and the query parameters forwarded by the
+  client are visible to the relay that terminates the connection.
+  Client-local parameters are omitted by clients that implement their
+  keyspace specifications.  They MUST NOT be treated as confidential:
+  clients that do not recognize a keyspace forward its parameters, and the
+  URI may also be exposed in application logs or other client-side storage.
 
 TODO: Expand this section with additional considerations.
 
 # IANA Considerations
+
+## MOQT URI Keyspace Registry
+
+This document establishes the "MOQT URI Key Space" registry.
+
+New keyspaces are registered using the Specification Required policy
+{{!RFC8126}}.
+
+Each entry in the registry contains the following fields.  Keyspace names
+use the syntax defined in Section {{moqt-query}}.
+
+| Keyspace | Description | Specification | Contact |
+|:---------|:------------|:---------------|:--------|
+
+This registry is initially empty.
+
 
 ## Service Name Registration {#iana-service}
 
