@@ -225,8 +225,8 @@ If the URI reg-name ends in a ".", that MUST be removed.
 Internationalized Domain Names in the reg-name MUST be converted to IDNA
 format as defined in {{RFC5890}}.
 
-When comparing hostnames, wildcard matching MUST NOT be supported and
-the "*" character has no special meaning.
+Open Issue: Decide if wildcard certificates are allowed and add 
+text to describe how to handle them.
 
 
 # X.509 Certificate Matching {#cert-matching}
