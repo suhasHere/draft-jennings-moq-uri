@@ -464,8 +464,8 @@ observers and intermediaries:
 
 TODO: Expand this section with additional considerations.
 
-Use of self-signed certificates is out of scope for this 
-specification but can be allowed in other separate specifications. 
+Use of self-signed certificates is out of scope for this
+specification but can be allowed in other separate specifications.
 
 # IANA Considerations
 
