@@ -225,7 +225,7 @@ If the URI reg-name ends in a ".", that MUST be removed.
 Internationalized Domain Names in the reg-name MUST be converted to IDNA
 format as defined in {{RFC5890}}.
 
-Open Issue: Decide if wildcard certificates are allowed and add 
+Open Issue: Decide if wildcard certificates are allowed and add
 text to describe how to handle them.
 
 
