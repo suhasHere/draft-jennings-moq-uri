@@ -117,7 +117,7 @@ mDNS and DNS-SD ({{mdns}}):
 
 Discovery of a relay on the local network is particularly
 useful for MOQT endpoints where multiple endpoints want to
-subscribe to the same MoQT content. For example, multiple TVs in a
+subscribe to the same MOQT content. For example, multiple TVs in a
 building streaming the same sports game, or multiple people on the
 same campus who are on the same video conference call. In these
 cases, the local network discovery allows a local relay to aggregate the
