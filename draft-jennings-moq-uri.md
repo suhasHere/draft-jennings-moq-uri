@@ -122,7 +122,7 @@ building streaming the same sports game, or multiple people on the
 same campus who are on the same video conference call. In these
 cases, the local network discovery allows a local relay to aggregate the
 upstream requests and reduce bandwidth usage across the WAN link.
-If the common case where the WAN link is the congestion
+In the common case where the WAN link is the congestion
 bottleneck, this can increase the quality of the media to all the
 users that are using the local relay.
 
