@@ -115,6 +115,16 @@ mDNS and DNS-SD ({{mdns}}):
 : Multicast DNS {{RFC6762}} and DNS Service Discovery {{RFC6763}} for local
   network discovery without a central DNS server.
 
+Discovering a relay on the local network is particularly useful when
+multiple MOQT endpoints on that network subscribe to the same content,
+for example, several TVs in a building streaming the same sports event,
+or many participants on a campus joining the same video conference.
+A local relay can aggregate these subscriptions into a single upstream
+subscription and fan the content out locally, so each object crosses
+the WAN link once rather than once per endpoint. Because the WAN link
+is commonly the congestion bottleneck, this can also improve media
+quality for all endpoints served by the local relay.
+
 # Conventions and Definitions
 
 This specification uses the terminology from {{RFC3986}}, {{RFC5280}},
