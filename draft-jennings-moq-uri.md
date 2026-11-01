@@ -235,8 +235,8 @@ If the URI reg-name ends in a ".", that MUST be removed.
 Internationalized Domain Names in the reg-name MUST be converted to IDNA
 format as defined in {{RFC5890}}.
 
-When comparing hostnames, wildcard matching MUST NOT be supported and
-the "*" character has no special meaning.
+Open Issue: Decide if wildcard certificates are allowed and add
+text to describe how to handle them.
 
 
 # X.509 Certificate Matching {#cert-matching}
@@ -262,9 +262,6 @@ certificate matches the URI, then the certificate is valid for that URI.
 * uniformResourceIdentifier: The canonicalized uniformResourceIdentifier
   MUST match the canonicalized URI with the query and fragment removed.
 
-* SRVName: Matched as described in Section 4 of {{RFC4985}} using the
-  host part of the authority from the canonicalized URI as the name
-  restriction and a SRVName restrictions of "_moqt".
 
 ## WebTransport Certificate Validation
 
@@ -289,9 +286,6 @@ extension likewise MUST contain the original authority's host.  This is
 consistent with the requirements in {{RFC9460, Section 2.3}} and with
 the SRV rules in {{srv}} of this document.
 
-SRVName matching ({{RFC4985}}) applies regardless of whether the client
-discovered the endpoint via SRV records or SVCB records, because the
-`_moqt` service type is the same in both cases.
 
 # SVCB Records for MOQT {#svcb}
 
@@ -352,6 +346,9 @@ misleading.
 When present, `port` specifies the UDP port for the native QUIC
 endpoint.  When absent, the port from the `moqt` URI is used,
 defaulting to 443.
+
+Open Issue: Magnus raises the issue that we should reconsider our
+previous decision to sit on the HTTP port for moq over raw quic.
 
 ### ech
 
@@ -504,5 +501,5 @@ TODO
 # Acknowledgments
 {:numbered="false"}
 
-Huge thanks to high quality review from Bejamin Schwartz.
+Huge thanks to high quality review from Benjamin Schwartz.
 
