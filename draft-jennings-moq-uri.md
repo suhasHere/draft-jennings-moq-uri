@@ -115,7 +115,7 @@ mDNS and DNS-SD ({{mdns}}):
 : Multicast DNS {{RFC6762}} and DNS Service Discovery {{RFC6763}} for local
   network discovery without a central DNS server.
 
-Discover of a relay on the local network discovery is particularly
+Discovery of a relay on the local network is particularly
 useful for MOQT endpoints where multiple endpoints want to
 subscribe to the same MoQT content. For example, multiple TVs in a
 building streaming the same sports game, or multiple people on the
