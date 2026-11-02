@@ -447,9 +447,12 @@ UIR, ensure that the client connects to a MoQ server that is
 trusted to handle the content. The relays are considered to be
 trusted if they can prove that they have an appropriate PKI
 certificate for the moqt URI or, in the case where MDNS is enabled,
-they are on the local network.
+the applications explicitly trusts relays on the local network.
 
-
+The preferred way to authorize a local relay in the enterprise case that
+is using device management systems, is to push a policy list of trusted
+relays. For non managed devices, the application needs to explicitly ask
+permission to use the relay on the local network.
 
 Dereferencing a `moqt` URI exposes the following information to on-path
 observers and intermediaries:
