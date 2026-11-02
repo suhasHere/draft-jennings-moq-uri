@@ -439,7 +439,27 @@ This document does not define SVCB-based service parameter delivery
 for MOQT DNS-SD instances; the TXT record ({{mdns-txt}}) is the sole
 mechanism for conveying ALPN information in DNS-SD.
 
+# Operational Considerations {#ops}
+
+For larger deployments, operators are encouraged to publish SVCB records for
+`moqt` authorities rather than relying on A or AAAA records.  SVCB
+records allow clients to learn the server's supported ALPNs and
+connection parameters as well as make it easier to load balance
+and provide high availability for the service.
+
 # Security Considerations {#security-considerations}
+
+The overall security goals for this specification is, given a moqt
+UIR, ensure that the client connects to a MoQ server that is
+trusted to handle the content. The relays are considered to be
+trusted if they can prove that they have an appropriate PKI
+certificate for the moqt URI or, in the case where MDNS is enabled,
+the applications explicitly trusts relays on the local network.
+
+The preferred way to authorize a local relay in the enterprise case that
+is using device management systems, is to push a policy list of trusted
+relays. For non managed devices, the application needs to explicitly ask
+permission to use the relay on the local network.
 
 Dereferencing a `moqt` URI exposes the following information to on-path
 observers and intermediaries:
@@ -453,6 +473,9 @@ observers and intermediaries:
   that terminates the client's connection.
 
 TODO: Expand this section with additional considerations.
+
+Use of self-signed certificates is out of scope for this
+specification but can be allowed in other separate specifications.
 
 # IANA Considerations
 
